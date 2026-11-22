@@ -49,20 +49,6 @@
 						"type": "DatasetReference"
 					},
 					"name": "DimFecha"
-				},
-				{
-					"dataset": {
-						"referenceName": "gold_dim_fecha",
-						"type": "DatasetReference"
-					},
-					"name": "source1"
-				},
-				{
-					"dataset": {
-						"referenceName": "gold_dim_fecha",
-						"type": "DatasetReference"
-					},
-					"name": "source2"
 				}
 			],
 			"sinks": [
@@ -107,15 +93,6 @@
 				},
 				{
 					"name": "derivedColumn3"
-				},
-				{
-					"name": "join2"
-				},
-				{
-					"name": "join3"
-				},
-				{
-					"name": "derivedColumn4"
 				}
 			],
 			"scriptLines": [
@@ -196,44 +173,6 @@
 				"     validateSchema: false,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
 				"     format: 'table') ~> DimFecha",
-				"source(output(",
-				"          fecha_key as integer,",
-				"          fecha_completa as date,",
-				"          anio as short,",
-				"          trimestre as integer,",
-				"          trimestre_nombre as string,",
-				"          mes as integer,",
-				"          mes_nombre as string,",
-				"          mes_corto as string,",
-				"          semana_anio as integer,",
-				"          dia_mes as integer,",
-				"          dia_semana as integer,",
-				"          dia_nombre as string,",
-				"          es_fin_de_semana as boolean",
-				"     ),",
-				"     allowSchemaDrift: true,",
-				"     validateSchema: false,",
-				"     isolationLevel: 'READ_UNCOMMITTED',",
-				"     format: 'table') ~> source1",
-				"source(output(",
-				"          fecha_key as integer,",
-				"          fecha_completa as date,",
-				"          anio as integer,",
-				"          trimestre as integer,",
-				"          trimestre_nombre as string,",
-				"          mes as integer,",
-				"          mes_nombre as string,",
-				"          mes_corto as string,",
-				"          semana_anio as integer,",
-				"          dia_mes as integer,",
-				"          dia_semana as integer,",
-				"          dia_nombre as string,",
-				"          es_fin_de_semana as boolean",
-				"     ),",
-				"     allowSchemaDrift: true,",
-				"     validateSchema: false,",
-				"     isolationLevel: 'READ_UNCOMMITTED',",
-				"     format: 'table') ~> source2",
 				"SourceAdmisiones, SourceDiag join(admission_id_bk == admission_id,",
 				"     joinType:'inner',",
 				"     matchType:'exact',",
@@ -320,22 +259,7 @@
 				"          {fecha_alta _key} = toInteger(coalesce(DimFecha@fecha_key, 0))) ~> derivedColumn1",
 				"lookup4 derive(fecha_key = iif(isNull(fecha_key), 0, fecha_key)) ~> derivedColumn2",
 				"select2 derive(dias_estancia = iif(dias_estancia < 0, 0, dias_estancia)) ~> derivedColumn3",
-				"derivedColumn3, source1 join(fecha_ingreso_key == fecha_key,",
-				"     joinType:'left',",
-				"     matchType:'exact',",
-				"     ignoreSpaces: false,",
-				"     broadcast: 'auto')~> join2",
-				"join2, source2 join(fecha_alta_key == source2@fecha_key,",
-				"     joinType:'left',",
-				"     matchType:'exact',",
-				"     ignoreSpaces: false,",
-				"     broadcast: 'auto')~> join3",
-				"join3 derive(fecha_ingreso_key = toInteger(iifNull(fecha_ingreso_key, 0)),",
-				"          fecha_alta_key = iifNull(fecha_alta_key, 0),",
-				"          diagnostico_key = iifNull(diagnostico_key, 0),",
-				"          paciente_key = iifNull(paciente_key, 0),",
-				"          departamento_key = iifNull(departamento_key, 0)) ~> derivedColumn4",
-				"derivedColumn4 sink(allowSchemaDrift: true,",
+				"derivedColumn3 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          admision_key as long,",
