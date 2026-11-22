@@ -57,6 +57,27 @@
 				},
 				{
 					"name": "lookup1"
+				},
+				{
+					"name": "lookup2"
+				},
+				{
+					"name": "lookup3"
+				},
+				{
+					"name": "lookup4"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "lookup5"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "derivedColumn2"
 				}
 			],
 			"scriptLines": [
@@ -144,7 +165,68 @@
 				"join1, DimPaciente lookup(patient_id == patient_id_bk,",
 				"     multiple: false,",
 				"     pickup: 'any',",
-				"     broadcast: 'auto')~> lookup1"
+				"     broadcast: 'auto')~> lookup1",
+				"lookup1, DimDiagnostico lookup(icd_code == codigo_icd,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookup2",
+				"lookup2, DimDepartamento lookup(department == nombre_departamento,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookup3",
+				"lookup3, DimFecha lookup(admission_date == fecha_completa,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookup4",
+				"lookup4 select(mapColumn(",
+				"          admission_id = SourceAdmisiones@admission_id,",
+				"          patient_id,",
+				"          admission_date,",
+				"          discharge_date,",
+				"          department,",
+				"          attending_doctor_id,",
+				"          diagnosis_id,",
+				"          admission_id = SourceDiagnosticos@admission_id,",
+				"          icd_code,",
+				"          diagnosis_description,",
+				"          severity,",
+				"          paciente_key,",
+				"          patient_id_bk,",
+				"          nombre_completo,",
+				"          genero,",
+				"          fecha_nacimiento,",
+				"          rango_etario,",
+				"          correo_electronico,",
+				"          direccion,",
+				"          proveedor_seguro,",
+				"          diagnostico_key,",
+				"          codigo_icd,",
+				"          descripcion_patologia,",
+				"          nivel_severidad,",
+				"          departamento_key,",
+				"          nombre_departamento,",
+				"          fecha_key,",
+				"          fecha_completa,",
+				"          anio,",
+				"          trimestre,",
+				"          trimestre_nombre,",
+				"          mes,",
+				"          mes_nombre,",
+				"          mes_corto,",
+				"          semana_anio,",
+				"          dia_mes,",
+				"          dia_semana,",
+				"          dia_nombre,",
+				"          es_fin_de_semana",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1, DimFecha lookup(discharge_date == DimFecha@fecha_completa,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookup5",
+				"lookup5 derive(conteo_admisiones = 1) ~> derivedColumn1",
+				"derivedColumn1 derive() ~> derivedColumn2"
 			]
 		}
 	}
