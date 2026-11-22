@@ -87,6 +87,9 @@
 				},
 				{
 					"name": "derivedColumn1"
+				},
+				{
+					"name": "derivedColumn2"
 				}
 			],
 			"scriptLines": [
@@ -192,7 +195,7 @@
 				"     multiple: false,",
 				"     pickup: 'any',",
 				"     broadcast: 'auto')~> lookup5",
-				"lookup4 select(mapColumn(",
+				"derivedColumn2 select(mapColumn(",
 				"          admission_id_bk,",
 				"          patient_id,",
 				"          department,",
@@ -250,6 +253,7 @@
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> select2",
 				"lookup5 derive(conteo_admisiones = 1) ~> derivedColumn1",
+				"lookup4 derive(fecha_key = iif(isNull(fecha_key), 0, fecha_key)) ~> derivedColumn2",
 				"select2 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
