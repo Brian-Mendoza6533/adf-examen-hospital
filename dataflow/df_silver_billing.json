@@ -13,6 +13,13 @@
 						"type": "DatasetReference"
 					},
 					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "dw_silver_admissions_sql",
+						"type": "DatasetReference"
+					},
+					"name": "source2"
 				}
 			],
 			"sinks": [
@@ -30,6 +37,12 @@
 				},
 				{
 					"name": "aggregate1"
+				},
+				{
+					"name": "split1"
+				},
+				{
+					"name": "join1"
 				}
 			],
 			"scriptLines": [
@@ -45,19 +58,42 @@
 				"     validateSchema: false,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
 				"     format: 'table') ~> source1",
+				"source(output(",
+				"          admission_id as integer,",
+				"          patient_id as integer,",
+				"          admission_date as date,",
+				"          discharge_date as date,",
+				"          department as string,",
+				"          attending_doctor_id as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source2",
 				"source1 derive(billing_id = toInteger(trim(billing_id)),",
 				"          admission_id = toInteger(trim(admission_id)),",
 				"          charge_type = iif(isNull(charge_type) || trim(charge_type) == '', 'SIN_CARGO', upper(trim(charge_type))),",
-				"          amount = toDecimal(replace(replace(replace(replace(upper(trim(amount)), 'USD', ''), '$', ''), ',', ''), ' ', ''), 12, 2),",
+				"          amount = iif(\r",
+				"    isNull(amount) || trim(amount) == '', \r",
+				"    toDecimal(0, 12, 2), \r",
+				"    toDecimal(replace(replace(replace(replace(upper(trim(amount)), 'USD', ''), '$', ''), ',', ''), ' ', ''), 12, 2)\r",
+				"),",
 				"          payment_status = iif(isNull(payment_status) || trim(payment_status) == '', 'SIN_ESTADO', upper(trim(payment_status))),",
 				"          payment_date =      coalesce(toDate(payment_date, 'yyyy-MM-dd'), toDate(payment_date, 'dd-MMM-yyyy'), toDate(payment_date, 'MMMM d, yyyy'), toDate(payment_date, 'MM-dd-yy'), toDate(payment_date, 'MM/dd/yyyy'), toDate('1900-01-01'))) ~> derivedColumn1",
-				"derivedColumn1 aggregate(groupBy(billing_id),",
-				"     admission_id = first(admission_id),",
+				"join1 aggregate(groupBy(billing_id),",
+				"     admission_id = first(derivedColumn1@admission_id),",
 				"          charge_type = first(charge_type),",
 				"          amount = first(amount),",
 				"          payment_status = first(payment_status),",
 				"          payment_date = first(payment_date)) ~> aggregate1",
-				"aggregate1 sink(allowSchemaDrift: true,",
+				"aggregate1 split(!isNull(billing_id) && !isNull(admission_id) && !isNull(amount),",
+				"     disjoint: false) ~> split1@(aceptados, rechazados)",
+				"derivedColumn1, source2 join(derivedColumn1@admission_id == source2@admission_id,",
+				"     joinType:'inner',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> join1",
+				"split1@aceptados sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          billing_id as integer,",
