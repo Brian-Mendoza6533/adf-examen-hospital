@@ -90,6 +90,9 @@
 				},
 				{
 					"name": "derivedColumn2"
+				},
+				{
+					"name": "derivedColumn3"
 				}
 			],
 			"scriptLines": [
@@ -252,9 +255,11 @@
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> select2",
-				"lookup5 derive(conteo_admisiones = 1) ~> derivedColumn1",
+				"lookup5 derive(conteo_admisiones = 1,",
+				"          {fecha_alta _key} = toInteger(coalesce(DimFecha@fecha_key, 0))) ~> derivedColumn1",
 				"lookup4 derive(fecha_key = iif(isNull(fecha_key), 0, fecha_key)) ~> derivedColumn2",
-				"select2 sink(allowSchemaDrift: true,",
+				"select2 derive(dias_estancia = iif(dias_estancia < 0, 0, dias_estancia)) ~> derivedColumn3",
+				"derivedColumn3 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          admision_key as long,",
