@@ -1,0 +1,89 @@
+{
+	"name": "df_silver_billing",
+	"properties": {
+		"folder": {
+			"name": "Silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "dw_bronze_billing_sql",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "dw_silver_billing_sql",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "aggregate1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          billing_id as string,",
+				"          admission_id as string,",
+				"          charge_type as string,",
+				"          amount as string,",
+				"          payment_status as string,",
+				"          payment_date as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 derive(billing_id = toInteger(trim(billing_id)),",
+				"          admission_id = toInteger(trim(admission_id)),",
+				"          charge_type = iif(isNull(charge_type) || trim(charge_type) == '', 'SIN_CARGO', upper(trim(charge_type))),",
+				"          amount = toDecimal(replace(replace(replace(replace(upper(trim(amount)), 'USD', ''), '$', ''), ',', ''), ' ', ''), 12, 2),",
+				"          payment_status = iif(isNull(payment_status) || trim(payment_status) == '', 'SIN_ESTADO', upper(trim(payment_status))),",
+				"          payment_date =      coalesce(toDate(payment_date, 'yyyy-MM-dd'), toDate(payment_date, 'dd-MMM-yyyy'), toDate(payment_date, 'MMMM d, yyyy'), toDate(payment_date, 'MM-dd-yy'), toDate(payment_date, 'MM/dd/yyyy'), toDate('1900-01-01'))) ~> derivedColumn1",
+				"derivedColumn1 aggregate(groupBy(billing_id),",
+				"     admission_id = first(admission_id),",
+				"          charge_type = first(charge_type),",
+				"          amount = first(amount),",
+				"          payment_status = first(payment_status),",
+				"          payment_date = first(payment_date)) ~> aggregate1",
+				"aggregate1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          billing_id as integer,",
+				"          admission_id as integer,",
+				"          charge_type as string,",
+				"          amount as decimal(12,2),",
+				"          payment_status as string,",
+				"          payment_date as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          billing_id,",
+				"          admission_id,",
+				"          charge_type,",
+				"          amount,",
+				"          payment_status,",
+				"          payment_date",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}
