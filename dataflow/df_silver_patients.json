@@ -8,14 +8,98 @@
 		"typeProperties": {
 			"sources": [
 				{
+					"dataset": {
+						"referenceName": "dw_bronze_patients_sql",
+						"type": "DatasetReference"
+					},
 					"name": "source1"
 				}
 			],
-			"sinks": [],
-			"transformations": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "dw_silver_patients_sql",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "aggregate1"
+				}
+			],
 			"scriptLines": [
-				"source(allowSchemaDrift: true,",
-				"     validateSchema: false) ~> source1"
+				"source(output(",
+				"          patient_id as string,",
+				"          full_name as string,",
+				"          gender as string,",
+				"          date_of_birth as string,",
+				"          phone as string,",
+				"          email as string,",
+				"          address as string,",
+				"          insurance_provider as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 derive(patient_id = toInteger(trim(patient_id)),",
+				"          full_name = iif(isNull(full_name) || trim(full_name) == '', 'SIN_NOMBRE', replace(trim(full_name), 'Â', '')),",
+				"          gender = iif(isNull(gender) || trim(gender) == '', 'Otro', iif(lower(trim(gender)) == 'm' || lower(trim(gender)) == 'male' || lower(trim(gender)) == 'masculino', 'Masculino', iif(lower(trim(gender)) == 'f' || lower(trim(gender)) == 'female' || lower(trim(gender)) == 'femenino', 'Femenino', 'Otro'))),",
+				"          date_of_birth = coalesce(\r",
+				"    toDate(date_of_birth, 'MMMM d, yyyy'), \r",
+				"    toDate(date_of_birth, 'MM-dd-yy'), \r",
+				"    toDate(date_of_birth, 'dd-MMM-yyyy'), \r",
+				"    toDate(date_of_birth, 'yyyy-MM-dd'), \r",
+				"    toDate(date_of_birth, 'MM/dd/yyyy'), \r",
+				"    toDate('1900-01-01', 'yyyy-MM-dd')\r",
+				"),",
+				"          phone = iif(isNull(phone) || trim(phone) == '' || lower(trim(phone)) == 'unknown', 'SIN_TELEFONO', trim(phone)),",
+				"          email = iif(isNull(email) || trim(email) == '', 'SIN_EMAIL', replace(replace(trim(email), ',com', '.com'), ' at ', '@')),",
+				"          address = iif(isNull(address) || trim(address) == '', 'SIN_DIRECCION', trim(address)),",
+				"          insurance_provider = upper(iif(isNull(insurance_provider) || trim(insurance_provider) == '', 'SIN_SEGURO', iif(lower(trim(insurance_provider)) == 'aetna' || lower(trim(insurance_provider)) == 'aetna inc.' || lower(trim(insurance_provider)) == 'aetnaa', 'AETNA', iif(lower(trim(insurance_provider)) == 'bluecross' || lower(trim(insurance_provider)) == 'blue cross' || lower(trim(insurance_provider)) == 'blue-cross', 'BLUECROSS', iif(lower(trim(insurance_provider)) == 'cigna' || lower(trim(insurance_provider)) == 'cigna health', 'CIGNA', iif(lower(trim(insurance_provider)) == 'medicaid' || lower(trim(insurance_provider)) == 'medi-care', 'MEDICAID', iif(lower(trim(insurance_provider)) == 'medicare', 'MEDICARE', iif(lower(trim(insurance_provider)) == 'self pay' || lower(trim(insurance_provider)) == 'self-pay', 'SELF PAY', iif(lower(trim(insurance_provider)) == 'uhc' || lower(trim(insurance_provider)) == 'united health' || lower(trim(insurance_provider)) == 'unitedhealth', 'UNITEDHEALTH', trim(insurance_provider))))))))))) ~> derivedColumn1",
+				"derivedColumn1 aggregate(groupBy(patient_id),",
+				"     full_name = first(full_name),",
+				"          gender = first(gender),",
+				"          date_of_birth = first(date_of_birth),",
+				"          phone = first(phone),",
+				"          email = first(email),",
+				"          address = first(address),",
+				"          insurance_provider = first(insurance_provider)) ~> aggregate1",
+				"aggregate1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          patient_id as integer,",
+				"          full_name as string,",
+				"          gender as string,",
+				"          date_of_birth as date,",
+				"          phone as string,",
+				"          email as string,",
+				"          address as string,",
+				"          insurance_provider as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          patient_id,",
+				"          full_name,",
+				"          gender,",
+				"          date_of_birth,",
+				"          phone,",
+				"          email,",
+				"          address,",
+				"          insurance_provider",
+				"     )) ~> sink1"
 			]
 		}
 	}
