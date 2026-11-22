@@ -145,7 +145,7 @@
 				"typeProperties": {
 					"scripts": [
 						{
-							"type": "Query",
+							"type": "NonQuery",
 							"text": "DELETE FROM silver.billing;\nDELETE FROM silver.diagnoses;\nDELETE FROM silver.admissions;\nDELETE FROM silver.patients;"
 						}
 					],
