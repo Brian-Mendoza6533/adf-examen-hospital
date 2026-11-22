@@ -12,21 +12,42 @@
 						"referenceName": "dw_silver_admissions_sql",
 						"type": "DatasetReference"
 					},
-					"name": "source1"
+					"name": "SourceAdmisiones"
 				},
 				{
 					"dataset": {
 						"referenceName": "dw_silver_diagnoses_sql",
 						"type": "DatasetReference"
 					},
-					"name": "source2"
+					"name": "SourceDiagnosticos"
+				},
+				{
+					"dataset": {
+						"referenceName": "gold_dim_paciente",
+						"type": "DatasetReference"
+					},
+					"name": "DimPaciente"
+				},
+				{
+					"dataset": {
+						"referenceName": "gold_dim_departamento",
+						"type": "DatasetReference"
+					},
+					"name": "DimDepartamento"
 				},
 				{
 					"dataset": {
 						"referenceName": "gold_dim_diagnostico",
 						"type": "DatasetReference"
 					},
-					"name": "SourceDimDiagnostico"
+					"name": "DimDiagnostico"
+				},
+				{
+					"dataset": {
+						"referenceName": "gold_dim_fecha",
+						"type": "DatasetReference"
+					},
+					"name": "DimFecha"
 				}
 			],
 			"sinks": [],
@@ -51,7 +72,7 @@
 				"     validateSchema: false,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
 				"     query: 'SELECT \\n    admission_id AS admission_id_bk,\\n    patient_id,\\n    department,\\n    admission_date,\\n    discharge_date,\\n    attending_doctor_id,\\n    DATEDIFF(DAY, admission_date, discharge_date) AS dias_estancia\\nFROM silver.admissions',",
-				"     format: 'query') ~> source1",
+				"     format: 'query') ~> SourceAdmisiones",
 				"source(output(",
 				"          diagnosis_id as integer,",
 				"          admission_id as integer,",
@@ -62,7 +83,30 @@
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
-				"     format: 'table') ~> source2",
+				"     format: 'table') ~> SourceDiagnosticos",
+				"source(output(",
+				"          paciente_key as integer,",
+				"          patient_id_bk as integer,",
+				"          nombre_completo as string,",
+				"          genero as string,",
+				"          fecha_nacimiento as date,",
+				"          rango_etario as string,",
+				"          correo_electronico as string,",
+				"          direccion as string,",
+				"          proveedor_seguro as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> DimPaciente",
+				"source(output(",
+				"          departamento_key as integer,",
+				"          nombre_departamento as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> DimDepartamento",
 				"source(output(",
 				"          diagnostico_key as integer,",
 				"          codigo_icd as string,",
@@ -72,13 +116,32 @@
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
-				"     format: 'table') ~> SourceDimDiagnostico",
-				"source1, source2 join(source1@admission_id == source2@admission_id,",
-				"     joinType:'inner',",
+				"     format: 'table') ~> DimDiagnostico",
+				"source(output(",
+				"          fecha_key as integer,",
+				"          fecha_completa as date,",
+				"          anio as integer,",
+				"          trimestre as integer,",
+				"          trimestre_nombre as string,",
+				"          mes as integer,",
+				"          mes_nombre as string,",
+				"          mes_corto as string,",
+				"          semana_anio as integer,",
+				"          dia_mes as integer,",
+				"          dia_semana as integer,",
+				"          dia_nombre as string,",
+				"          es_fin_de_semana as boolean",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> DimFecha",
+				"SourceAdmisiones, SourceDiagnosticos join(SourceAdmisiones@admission_id == SourceDiagnosticos@admission_id,",
+				"     joinType:'left',",
 				"     matchType:'exact',",
 				"     ignoreSpaces: false,",
 				"     broadcast: 'auto')~> join1",
-				"join1, SourceDimDiagnostico lookup(icd_code == codigo_icd,",
+				"join1, DimPaciente lookup(patient_id == patient_id_bk,",
 				"     multiple: false,",
 				"     pickup: 'any',",
 				"     broadcast: 'auto')~> lookup1"
